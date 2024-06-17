@@ -1,138 +1,174 @@
 #include "Utils.hpp"
+#include "Config.hpp"
 
 #pragma optimize("", off)
 
-#define ITERATIONS 1000000
-
-using namespace std;
-
-
 int main(int argc, char** argv)
 {
-				lua_State* L = luaL_newstate();
-				luaL_openlibs(L);
+    lua_State* L = luaL_newstate();
+    luaL_openlibs(L);
 
-				lua_register(L, "cprint", Utils::CoolPrint);
+    lua_register(L, "cprint", Utils::CoolPrint);
 
-				// Run it once to compile the file and print any error messages to the console
-				Utils::CheckSyntaxError(L, luaL_loadfile(L, "helloworld.lua"));
+    // Run it once to compile the file and print any error messages to the console
+    Utils::CheckSyntaxError(L, luaL_loadfile(L, "helloworld.lua"));
 
 
-				// Read integer
-				{
-								// Load the object onto the stack
-								lua_getglobal(L, "a");
+    // Read integer
+    {
+        // Load the object onto the stack
+        lua_getglobal(L, "a");
 
-								// Check if it is a number
-								if (lua_isnumber(L, -1))
-								{
-												// Start keeping track of time
-												auto start = chrono::steady_clock::now();
+        // Check if it is a number
+        if (lua_isnumber(L, -1))
+        {
+            vector<double> elapsedTimeResult;
 
-												double num;
+            // Run the test SAMPLES amount of times to get the average result
+            for (int i = 0; i < SAMPLES; i++)
+            {
+                double num;
 
-												// Read the top of the stack (which is a double) ITERATIONS amount of times
-												for (int i = 0; i < ITERATIONS; i++)
-												{
-																num = lua_tonumber(L, -1);
-												}
+                // Start keeping track of time
+                auto start = chrono::steady_clock::now();
 
-												// Keep track of the end time and print the result
-												auto end = chrono::steady_clock::now();
-												Utils::PrintTime(start, end);
-								}
+                // Read the top of the stack (which is a double) ITERATIONS amount of times
+                for (int j = 0; j < ITERATIONS; j++)
+                {
+                    num = lua_tonumber(L, -1);
+                }
 
-								// Pop the top of the stack
-								lua_pop(L, 1);
-				}
+                // Keep track of the end time and print the result
+                auto end = chrono::steady_clock::now();
 
-				// Write integer
-				{
-								auto start = chrono::steady_clock::now();
+                // Add result of current sample to the list
+                elapsedTimeResult.push_back(Utils::GetElapsedTime(start, end));
+            }
 
-								for (int i = 0; i < ITERATIONS; i++)
-								{
-												// Push number onto the stack
-												lua_pushnumber(L, 69);
+            // Print out the result
+            cout << "Average read time: " << Utils::GetAverageResult(elapsedTimeResult) << " ms" << endl;
+        }
 
-												// Assign the top value of the stack to the variable 'b' and pop the top of the stack
-												lua_setglobal(L, "b");
-								}
+        // Pop the top of the stack
+        lua_pop(L, 1);
+    }
 
-								auto end = chrono::steady_clock::now();
 
-								Utils::PrintTime(start, end);
-				}
+    // Write integer
+    {
+        vector<double> elapsedTimeResult;
 
-				// Function call
-				{
-								auto start = chrono::steady_clock::now();
+        for (int i = 0; i < SAMPLES; i++)
+        {
+            auto start = chrono::steady_clock::now();
 
-								for (int i = 0; i < ITERATIONS; i++)
-								{
-												// Load the function onto the stack
-												lua_getglobal(L, "luaFunc");
+            for (int j = 0; j < ITERATIONS; j++)
+            {
+                // Push number onto the stack
+                lua_pushnumber(L, 69);
 
-												// Call the top of stack with 0 arguments and 0 returns
-												lua_call(L, 0, 0);
-								}
+                // Assign the top value of the stack to the variable 'b' and pop the top of the stack
+                lua_setglobal(L, "b");
+            }
 
-								auto end = chrono::steady_clock::now();
+            auto end = chrono::steady_clock::now();
 
-								Utils::PrintTime(start, end);
-				}
+            // Add result of current sample to the list
+            elapsedTimeResult.push_back(Utils::GetElapsedTime(start, end));
+        }
 
-				// Function call with parameters
-				{
-								auto start = chrono::steady_clock::now();
+        cout << "Average write time: " << Utils::GetAverageResult(elapsedTimeResult) << " ms" << endl;
+    }
 
-								for (int i = 0; i < ITERATIONS; i++)
-								{
-												// Load the function onto the stack
-												lua_getglobal(L, "luaFunc2");
+    // Function call
+    {
+        vector<double> elapsedTimeResult;
 
-												// Push the argument to the stack
-												lua_pushnumber(L, 1);
+        for (int i = 0; i < SAMPLES; i++)
+        {
+            auto start = chrono::steady_clock::now();
 
-												// Call the top of the stack with 1 argument and 0 returns
-												lua_call(L, 1, 0);
-								}
+            for (int i = 0; i < ITERATIONS; i++)
+            {
+                // Load the function onto the stack
+                lua_getglobal(L, "luaFunc");
 
-								auto end = chrono::steady_clock::now();
+                // Call the top of stack with 0 arguments and 0 returns
+                lua_call(L, 0, 0);
+            }
 
-								Utils::PrintTime(start, end);
-				}
+            auto end = chrono::steady_clock::now();
 
-				// Function call with returns
-				{
-								auto start = chrono::steady_clock::now();
+            elapsedTimeResult.push_back(Utils::GetElapsedTime(start, end));
+        }
 
-								double num;
+        cout << "Average function call time: " << Utils::GetAverageResult(elapsedTimeResult) << " ms" << endl;
+    }
 
-								for (int i = 0; i < ITERATIONS; i++)
-								{
-												// Load the function onto the stack
-												lua_getglobal(L, "luaFunc3");
+    // Function call with parameters
+    {
+        vector<double> elapsedTimeResult;
 
-												// Call the top of the stack with 0 arguments and 1 return
-												lua_call(L, 0, 1);
+        for (int i = 0; i < SAMPLES; i++)
+        {
+            auto start = chrono::steady_clock::now();
 
-												// Cast the top of the stack to a number (assumed that it is a number)
-												num = lua_tonumber(L, -1);
+            for (int i = 0; i < ITERATIONS; i++)
+            {
+                // Load the function onto the stack
+                lua_getglobal(L, "luaFunc2");
 
-												// Pop the returned value from the stack
-												lua_pop(L, 1);
-								}
+                // Push the argument to the stack
+                lua_pushnumber(L, 1);
 
-								auto end = chrono::steady_clock::now();
+                // Call the top of the stack with 1 argument and 0 returns
+                lua_call(L, 1, 0);
+            }
 
-								Utils::PrintTime(start, end);
-				}
+            auto end = chrono::steady_clock::now();
 
-				// Opening multiple files
-				// Difference between get_mem_usage and visual studio debugger
+            elapsedTimeResult.push_back(Utils::GetElapsedTime(start, end));
+        }
 
-				cout << "Current memory usage: " << Utils::get_mem_usage(MEM_TYPE::IN_B) << endl;
+        cout << "Average function call with parameters time: " << Utils::GetAverageResult(elapsedTimeResult) << " ms" << endl;
+    }
 
-				lua_close(L);
+    // Function call with returns
+    {
+        vector<double> elapsedTimeResult;
+
+        for (int i = 0; i < SAMPLES; i++)
+        {
+            double num;
+
+            auto start = chrono::steady_clock::now();
+
+            for (int i = 0; i < ITERATIONS; i++)
+            {
+                // Load the function onto the stack
+                lua_getglobal(L, "luaFunc3");
+
+                // Call the top of the stack with 0 arguments and 1 return
+                lua_call(L, 0, 1);
+
+                // Cast the top of the stack to a number (assumed that it is a number)
+                num = lua_tonumber(L, -1);
+
+                // Pop the returned value from the stack
+                lua_pop(L, 1);
+            }
+
+            auto end = chrono::steady_clock::now();
+
+            elapsedTimeResult.push_back(Utils::GetElapsedTime(start, end));
+        }
+
+        cout << "Average function call with returns time: " << Utils::GetAverageResult(elapsedTimeResult) << " ms" << endl;
+    }
+
+    // Difference between get_mem_usage and visual studio debugger
+
+    //cout << "Current memory usage: " << Utils::get_mem_usage(MEM_TYPE::IN_B) << endl;
+
+    lua_close(L);
 }

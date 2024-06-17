@@ -153,6 +153,7 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Config.hpp" />
     <ClInclude Include="Includes.hpp" />
     <ClInclude Include="Utils.hpp" />
   </ItemGroup>
